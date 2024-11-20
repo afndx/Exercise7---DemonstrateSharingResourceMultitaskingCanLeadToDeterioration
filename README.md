@@ -1,53 +1,42 @@
-# Pengendalian LED STM32 Menggunakan FreeRTOS
-Program ini menunjukkan bagaimana cara mengendalikan empat LED pada mikrokontroler STM32 menggunakan FreeRTOS. Setiap LED dikendalikan oleh task terpisah yang berjalan secara paralel. Program ini menggunakan fitur FreeRTOS seperti pembuatan task, penjadwalan, dan sinkronisasi antar-task untuk mengendalikan task LED secara bersamaan.
+# Program Kontrol LED dengan FreeRTOS di STM32
+## Deskripsi
+Program ini bertujuan untuk mengontrol empat LED (Hijau, Merah, Kuning, dan Biru) menggunakan mikrokontroler STM32 dan FreeRTOS. Program ini dirancang untuk mengimplementasikan multi-threading, dimana masing-masing LED dikendalikan oleh task yang berbeda dengan waktu delay yang berbeda pula. Sistem ini juga menggunakan mekanisme akses data bersama dengan critical section untuk mencegah konflik antara task yang berjalan.
 
-## Fitur Utama
-- Empat task kontrol LED terpisah (Green, Red, Yellow, dan Blue LED)
-- Perubahan status LED dengan frekuensi dan perilaku yang berbeda
-- Penggunaan critical section untuk melindungi sumber daya bersama (startFlag)
-- FreeRTOS untuk multi-threading
-## Deskripsi Perangkat Lunak
-### Inisialisasi Utama (main.c)
-- Inisialisasi HAL: Program dimulai dengan inisialisasi hardware abstraction layer (HAL) STM32, yang mengonfigurasi clock sistem, menginisialisasi GPIO, dan memulai FreeRTOS.
-### Pembuatan Task FreeRTOS:
-- Default Task: Task ini menjalankan loop minimal yang tidak melakukan apa-apa kecuali memanggil osDelay() untuk memberi kesempatan scheduler untuk berjalan.
-- Task LED Hijau (greend_led): Task ini menyalakan LED Hijau (GPIO_PIN_0), mengakses data bersama dengan critical section, dan kemudian mematikan LED setelah penundaan 200 ms.
-- Task LED Merah (red_led): Mirip dengan task LED Hijau, tetapi mengendalikan LED Merah (GPIO_PIN_1) dan task ini memiliki penundaan 550 ms.
-- Task LED Kuning (yellow_led): Task ini menyalakan dan mematikan LED Kuning (GPIO_PIN_2) setiap 50 ms, menghasilkan efek kedipan.
-### Manajemen Critical Section
-Task untuk LED Hijau dan Merah menunjukkan akses ke data bersama (startFlag). Fungsi accessSharedData() memastikan bahwa hanya satu task yang dapat mengakses sumber daya bersama pada satu waktu dengan menggunakan critical section (taskENTER_CRITICAL dan taskEXIT_CRITICAL). Ini mencegah terjadinya konflik saat mengakses atau memodifikasi data bersama.
+## Fitur:
+- Green LED: Menyala selama 200 ms, dan mematikan LED hijau setelahnya. Menggunakan critical section untuk akses data bersama.
+- Red LED: Menyala selama 550 ms, dan mematikan LED merah setelahnya. Menggunakan critical section untuk akses data bersama.
+- Yellow LED: LED kuning akan menyala setiap 50 ms, memberikan efek berkedip cepat.
+- Blue LED: Menyala jika ada konflik dalam mengakses data bersama (ketika dua task mencoba mengakses data secara bersamaan).
+## Struktur Program
+1. Inisialisasi Perangkat
 
-- Critical Section:
-   - Jika startFlag == 1, flag diubah menjadi 0, yang menunjukkan bahwa sumber daya bersama sedang digunakan.
-   - Jika flag bernilai 0, ini menandakan adanya konflik, dan LED Biru (GPIO_PIN_3) akan menyala untuk memberi sinyal masalah.
-   - Setelah operasi simulasi (diwakili oleh penundaan 1000 ms), flag direset menjadi 1, dan LED Biru dimatikan.
-### Inisialisasi GPIO (MX_GPIO_Init)
-Pin GPIO yang digunakan untuk LED diinisialisasi dengan mode output push-pull. Pin-pin berikut dikonfigurasi sebagai output:
-- LED1 (Hijau) pada GPIO_PIN_0
-- LED2 (Merah) pada GPIO_PIN_1
-- LED3 (Kuning) pada GPIO_PIN_2
-- LED4 (Biru) pada GPIO_PIN_3
-### Konfigurasi Clock Sistem (SystemClock_Config)
-Clock sistem dikonfigurasi untuk menggunakan osilator Internal High-Speed (HSI) untuk menggerakkan CPU, AHB, dan bus APB. Ini memastikan mikrokontroler beroperasi pada frekuensi clock yang sesuai dengan task.
+- Task FreeRTOS
+Program ini menggunakan FreeRTOS untuk membuat beberapa task dengan pengaturan prioritas yang berbeda.
 
-### Konfigurasi FreeRTOS
-Program ini menggunakan FreeRTOS untuk mengelola task secara bersamaan:
+  - defaultTask: Task utama yang berjalan dalam sistem, namun hanya menunggu selama 1 ms.
+  - GreenLEDTask: Menyalakan LED Hijau, mengakses data bersama dengan critical section, dan menunggu selama 200 ms.
+  -  RedLEDTask: Menyalakan LED Merah, mengakses data bersama dengan critical section, dan menunggu selama 550 ms.
+  - YellowLEDTask: Mengaktifkan LED Kuning dengan interval 50 ms.
+##  Akses Data Bersama
+Data bersama dikelola menggunakan variabel global startFlag yang digunakan untuk memastikan bahwa hanya satu task yang dapat mengakses data dalam satu waktu. Bila ada konflik (dua task mencoba mengakses data bersama secara bersamaan), LED Biru akan menyala untuk menunjukkan terjadinya konflik.
 
-- Task: Setiap LED dikendalikan oleh task FreeRTOS terpisah, memungkinkan eksekusi paralel.
-- Scheduler: Scheduler FreeRTOS menangani eksekusi task secara real-time, memungkinkan LED untuk berkedip dan menyala pada frekuensi yang berbeda sesuai dengan task-nya.
-- Penundaan: Fungsi osDelay() digunakan di setiap task untuk memperkenalkan penundaan, memungkinkan task lainnya berjalan sementara menunggu.
-### Deskripsi Fungsi
-- main(): Menginisialisasi sistem, mengonfigurasi clock, GPIO, dan membuat task FreeRTOS.
-- StartDefaultTask(): Task default dengan fungsionalitas minimal untuk menjaga sistem tetap berjalan.
-- greend_led(): Menyalakan LED Hijau, mengakses data bersama dalam critical section, lalu mematikan LED.
-- red_led(): Mirip dengan task LED Hijau, tetapi mengendalikan LED Merah dan memiliki penundaan yang lebih lama.
-- yellow_led(): Menyalakan dan mematikan LED Kuning setiap 50 ms.
-- accessSharedData(): Mensimulasikan akses ke data bersama, dilindungi oleh critical section, dan menangani konflik dengan menyalakan LED Biru jika terjadi konflik.
-### Penanganan Error
-- Error_Handler(): Jika terjadi error, fungsi ini menonaktifkan interupsi dan memasuki loop tak terbatas.
-- assert_failed(): Digunakan untuk debugging, melaporkan file dan nomor baris di mana terjadi kegagalan assert.Pengendalian LED STM32 Menggunakan FreeRTOS
+## Simulasi Operasi Baca/Tulis
+Fungsi SimulateReadWriteOperation mensimulasikan operasi baca/tulis dengan menggunakan loop kosong (nop), yang membuat mikrokontroler sibuk untuk jangka waktu tertentu.
+
+## Alur Program
+- Task GreenLEDTask akan menyala LED Hijau, mengakses data bersama dengan aman, dan mematikannya setelah 200 ms.
+- Task RedLEDTask akan melakukan hal yang sama untuk LED Merah, namun dengan delay yang lebih panjang (550 ms).
+- Task YellowLEDTask bertugas untuk mengaktifkan LED Kuning dengan interval 50 ms, menciptakan efek kedip.
+- Jika terjadi konflik, LED Biru akan menyala menandakan bahwa ada masalah dalam mengakses data bersama.
 ## Demo
- 
+- exercise 7 tanpa disable interrupt
+  
 
-https://github.com/user-attachments/assets/fb6f391d-3859-4eac-a9ab-fb13831d0019
+https://github.com/user-attachments/assets/669809ab-b6ee-4e24-a417-2decf88c3474
+
+- exercise 7 dengan disable interrupt
+
+
+https://github.com/user-attachments/assets/023244c8-6c99-4a36-82d3-d5bec0609576
+
 
